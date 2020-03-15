@@ -1,0 +1,42 @@
+service: ctcwhookv4
+
+provider:
+  name: aws
+  region: eu-central-1
+  role: SLSRole
+  runtime: go1.x
+
+custom:
+  SSM_KEY_PATH: ${self:service}/param
+  WEBHOOK_URL: "xxxx"
+
+plugins:
+  - serverless-go-plugin
+
+functions:
+  ssm-change:
+    role: SSMChangeLambdaRole
+    handler: ./functions/ssm-change
+    environment:
+      SSM_KEY_PATH: "/${self:custom.SSM_KEY_PATH}"
+    events:
+      - http:
+          method: GET
+          path: /
+  ssm-react:
+    role: SSMReactLambdaRole
+    handler: ./functions/ssm-react
+    environment:
+      WEBHOOK_URL: ${self:custom.WEBHOOK_URL}
+    events:
+      - cloudwatchEvent:
+          event:
+            source:
+              - aws.ssm
+            detail-type:
+              - "Parameter Store Change"
+
+resources:
+  - ${file(./resources/sls-iam.yml)}
+  - ${file(./resources/lambda-iam.yml)}
+  - ${file(./resources/cloudtrail.yml)}

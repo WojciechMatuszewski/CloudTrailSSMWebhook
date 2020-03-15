@@ -1,0 +1,25 @@
+Resources:
+  SLSRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ${self:service}-SLSRole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+
+  SLSDeploymentPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ${self:service}-SLSPolicy
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+            Resource:
+              - !Join ["", ["arn:aws:s3:::", !Ref "ServerlessDeploymentBucket"]]
+      Roles:
+        - !Ref SLSRole

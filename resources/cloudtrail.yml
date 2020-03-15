@@ -1,0 +1,48 @@
+Resources:
+  # GetAtt arn
+  # SSMLogGroup:
+  #   Type: "AWS::Logs::LogGroup"
+  #   Properties:
+  #     LogGroupName: ${self:provider}-SSM-LG
+
+  SSMCloudTrailDeliveryBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SSMCloudTrailDeliveryBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetBucketAcl
+            Resource:
+              - !GetAtt [SSMCloudTrailDeliveryBucket, "Arn"]
+            Principal:
+              Service: "cloudtrail.amazonaws.com"
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+            Resource:
+              - !Join ["", [!GetAtt [SSMCloudTrailDeliveryBucket, "Arn"], "/*"]]
+            Principal:
+              Service: "cloudtrail.amazonaws.com"
+            Condition:
+              StringEquals:
+                s3:x-amz-acl: "bucket-owner-full-control"
+
+  SSMCloudTrailDeliveryBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: ${self:service}-trailbucket
+
+  SSMCloudTrail:
+    Type: AWS::CloudTrail::Trail
+    DependsOn:
+      - SSMCloudTrailDeliveryBucketPolicy
+    Properties:
+      TrailName: ${self:service}-SSM-Trail
+      # CloudWatchLogsLogGroupArn: !GetAtt [SSMLogGroup, "Arn"]
+      EventSelectors:
+        - IncludeManagementEvents: true
+          ReadWriteType: WriteOnly
+      IsLogging: true
+      S3BucketName: !Ref SSMCloudTrailDeliveryBucket

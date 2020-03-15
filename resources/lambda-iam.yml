@@ -1,0 +1,65 @@
+Resources:
+  SSMReactLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ${self:service}-SSMR-lambda-role
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+
+  SSMChangeLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ${self:service}-SSM-lambda-role
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ${self:service}-SSM-readwrite
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:PutParameter
+                  - ssm:GetParameter
+                Resource:
+                  - !Join [
+                      ":",
+                      [
+                        "arn:aws:ssm",
+                        "${self:provider.region}",
+                        !Ref "AWS::AccountId",
+                        "parameter/${self:custom.SSM_KEY_PATH}",
+                      ],
+                    ]
+
+  CloudWatchLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ${self:service}-lambda-logging-policy
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              - !Join [
+                  ":",
+                  [
+                    "arn:aws:logs",
+                    !Ref "AWS::Region",
+                    !Ref "AWS::AccountId",
+                    "log-group:/aws/lambda/*:*:*",
+                  ],
+                ]
+      Roles:
+        - !Ref SSMChangeLambdaRole
+        - !Ref SSMReactLambdaRole
